@@ -1,0 +1,82 @@
+.task-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: center;
+    padding: 1rem;
+  }
+  
+  /* Responsivo: máximo 100% en mobile, fijo en desktop */
+  .task-card {
+    position: relative;
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    flex: 1 1 250px; /* 💡 se ajusta automáticamente */
+    max-width: 260px; /* 💡 evita que se estiren demasiado */
+    min-width: 220px;
+  }
+  
+  .task-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+  }
+  
+  .task-info {
+    animation: fadeIn 0.2s ease-in-out;
+    margin-top: 0.5rem;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .task-name {
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+  }
+  
+  .task-datetime {
+    font-size: 0.9rem;
+    color: #555;
+  }
+  
+  .task-status {
+    font-size: 0.85rem;
+    margin: 0.5rem 0;
+    font-weight: 500;
+  }
+  
+  .task-status.done {
+    color: #28a745;
+  }
+  
+  .task-status.pending {
+    color: #ff9800;
+  }
+  
+  .complete-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+  
+  .complete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  

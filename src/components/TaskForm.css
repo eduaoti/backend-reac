@@ -1,0 +1,19 @@
+.task-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  /* para forzar que el popper de MUI quede arriba */
+  .MuiPickersPopper-root {
+    z-index: 2000 !important;
+  }
+  
+  /* ancho del input */
+  .date-time-picker {
+    min-width: 240px;
+  }
+  
