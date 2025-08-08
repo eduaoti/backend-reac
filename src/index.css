@@ -106,3 +106,22 @@
   color: #ffc107;
   text-align: center;
 }
+.boton-canjear {
+  background: linear-gradient(135deg, #a78bfa, #c084fc);
+  color: white;
+  font-weight: bold;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 5px 15px rgba(165, 119, 255, 0.4);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin: 1rem auto;
+  display: block;
+}
+
+.boton-canjear:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(192, 132, 252, 0.6);
+}
