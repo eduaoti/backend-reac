@@ -9,7 +9,7 @@
   /* Responsivo: máximo 100% en mobile, fijo en desktop */
   .task-card {
     position: relative;
-    background: white;
+    background-color: rgba(255, 255, 255, 0.8); /* blanco con 80% de opacidad */
     padding: 1rem;
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
