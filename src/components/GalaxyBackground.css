@@ -1,0 +1,11 @@
+/* src/components/GalaxyBackground.css */
+.galaxy-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(ellipse at center, #0b0b2b 0%, #050510 100%);
+  }
+  
