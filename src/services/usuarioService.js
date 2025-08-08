@@ -1,34 +1,33 @@
-const API = 'http://localhost:3000/api/usuarios';
+// src/services/usuarioService.js
+import axios from 'axios';
+
+const API = 'https://localhost:3000/api/usuarios';
 
 export async function registrarUsuario(datos) {
-  const res = await fetch(`${API}/registrar`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(datos)
+  // { correo, contraseña, ... } 
+  const { data } = await axios.post(`${API}/registrar`, datos, {
+    headers: { 'Content-Type': 'application/json' }
   });
-  return await res.json();
+  return data;
 }
 
 export async function verificarOTP(correo, otp) {
-  const res = await fetch(`${API}/verificar-otp`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ correo, otp })
-  });
-  return await res.json();
+  const { data } = await axios.post(
+    `${API}/verificar-otp`,
+    { correo, otp },
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+  return data;
 }
 
 export async function login(correo, contraseña) {
-  const res = await fetch(`${API}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ correo, contraseña })
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.mensaje || 'Error al iniciar sesión');
-  }
-
-  return await res.json(); // contiene token y usuario
+  const { data } = await axios.post(
+    `${API}/login`,
+    { correo, contraseña },
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+  
+  // data debe tener { token, usuario }
+  // El bearer lo aplicamos después en App.jsx
+  return data;
 }

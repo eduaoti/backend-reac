@@ -63,14 +63,16 @@
 
 /* Estilo para dashboard */
 .contenedor-dashboard {
-  background: white;
+  background-color: rgba(149, 149, 149, 0.8); /* blanco con 80% de opacidad */
   color: #333;
-  padding: 3rem;
+  padding: 2rem 2.5rem;
   border-radius: 1rem;
   width: 100%;
-  max-width: 1000px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  max-width: 720px; /* antes 1000px */
+  margin: 2rem auto; /* centrar verticalmente */
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
 }
+
 
 .dashboard-header {
   display: flex;
@@ -97,4 +99,10 @@
 
 .boton-cerrar:hover {
   background-color: #dc2626;
+}
+.puntos-usuario {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #ffc107;
+  text-align: center;
 }

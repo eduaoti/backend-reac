@@ -1,33 +1,65 @@
+.task-form-container {
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 2rem 2.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 2.5rem auto;
+  text-align: center;
+}
+
+.task-form-title {
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #2e2b81;
+}
+
 .task-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 2rem;
-  }
-  
-  /* para forzar que el popper de MUI quede arriba */
-  .MuiPickersPopper-root {
-    z-index: 2000 !important;
-  }
-  
-  /* ancho del input */
-  .date-time-picker {
-    min-width: 240px;
-  }
-  .task-form-container {
-    background-color: rgba(255, 255, 255, 0.8); /* blanco con 80% de opacidad */
-    padding: 2rem;
-    border-radius: 1rem;
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
-    max-width: 700px;
-    margin: 2rem auto;
-    text-align: center;
-  }
-  
-  .task-form .MuiFormControl-root label {
-    color: #2e2b81; /* color violeta bonito */
-    font-weight: 500;
-  }
-  
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  align-items: center;
+}
+
+/* Inputs y selects */
+.task-form .MuiFormControl-root {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Z-index alto para el popper del DateTimePicker */
+.MuiPickersPopper-root {
+  z-index: 2000 !important;
+}
+
+/* Ajuste para el campo de fecha */
+.date-time-picker {
+  width: 100%;
+}
+
+/* Estilo de etiquetas */
+.task-form .MuiFormControl-root label {
+  color: #2e2b81;
+  font-weight: 500;
+}
+
+/* Botón */
+.task-form .MuiButton-contained {
+  background-color: #2e2b81;
+  text-transform: none;
+  padding: 0.6rem 2rem;
+  font-weight: 500;
+  border-radius: 0.6rem;
+  margin-top: 1rem;
+}
+
+.task-form .MuiButton-contained:hover {
+  background-color: #221e70;
+}
+
+/* Campo colaborador */
+.colab-input {
+  width: 100%;
+  max-width: 400px;
+}

@@ -1,32 +1,58 @@
-const API = 'http://localhost:3000/api/tareas';
+const API = 'https://localhost:3000/api/tareas';
 
-function getToken() {
-  return localStorage.getItem('token');
+function getTokenHeader() {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// Manejo de respuesta segura
+async function handleResponse(response) {
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type");
+    const errorText = await response.text();
+
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error(`Respuesta no válida: ${errorText}`);
+    }
+
+    const errorJson = JSON.parse(errorText);
+    throw new Error(errorJson.mensaje || 'Error desconocido');
+  }
+
+  return response.json();
 }
 
 export async function fetchTareas() {
-  const r = await fetch(API, {
-    headers: { 'Authorization': getToken() }
+  const res = await fetch(API, {
+    headers: getTokenHeader()
   });
-  return r.json();
+  return handleResponse(res);
 }
 
 export async function addTarea(tarea) {
-  await fetch(API, {
+  const res = await fetch(API, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': getToken()
+      ...getTokenHeader()
     },
     body: JSON.stringify(tarea)
   });
+  return handleResponse(res);
 }
 
-export async function completarTarea(id) {
-  await fetch(`${API}/${id}/cumplir`, {
+export async function completarTarea(id, formData) {
+  const res = await fetch(`${API}/${id}/cumplir`, {
     method: 'PUT',
-    headers: {
-      'Authorization': getToken()
-    }
+    headers: getTokenHeader(), // No pongas Content-Type
+    body: formData
   });
+  return handleResponse(res);
+}
+
+export async function obtenerPuntajeTotal() {
+  const res = await fetch(`${API}/puntos/total`, {
+    headers: getTokenHeader()
+  });
+  return handleResponse(res);
 }
