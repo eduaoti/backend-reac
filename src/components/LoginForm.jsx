@@ -15,7 +15,8 @@ export default function LoginForm({ onLogin, cambiarVista }) {
     try {
       const res = await login(email, password);
       localStorage.setItem('token', res.token);
-      onLogin({ nombre: res.usuario.nombre }); 
+      localStorage.setItem('usuario', JSON.stringify(res.usuario));
+      onLogin({ token: res.token, usuario: res.usuario }); // ✅ PASAMOS token y usuario
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
     }
@@ -24,7 +25,6 @@ export default function LoginForm({ onLogin, cambiarVista }) {
   return (
     <div className="login-container">
       <h1>Iniciar Sesión</h1>
-
       <form onSubmit={handleSubmit} className="login-form">
         <label htmlFor="email">Correo electrónico:</label>
         <div className="input-with-icon">
@@ -49,9 +49,17 @@ export default function LoginForm({ onLogin, cambiarVista }) {
             onChange={e => setPassword(e.target.value)}
             required
           />
-          {verPassword
-            ? <FaRegEyeSlash className="eye-icon" onClick={() => setVerPassword(false)} />
-            : <FaRegEye className="eye-icon" onClick={() => setVerPassword(true)} />}
+          {verPassword ? (
+            <FaRegEyeSlash
+              className="eye-icon"
+              onClick={() => setVerPassword(false)}
+            />
+          ) : (
+            <FaRegEye
+              className="eye-icon"
+              onClick={() => setVerPassword(true)}
+            />
+          )}
         </div>
 
         {error && <p className="error">{error}</p>}

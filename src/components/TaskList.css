@@ -1,82 +1,133 @@
 .task-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    justify-content: center;
-    padding: 1rem;
-  }
-  
-  /* Responsivo: máximo 100% en mobile, fijo en desktop */
-  .task-card {
-    position: relative;
-    background-color: rgba(255, 255, 255, 0.8); /* blanco con 80% de opacidad */
-    padding: 1rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    cursor: pointer;
-    transition: transform 0.3s ease;
-    flex: 1 1 250px; /* 💡 se ajusta automáticamente */
-    max-width: 260px; /* 💡 evita que se estiren demasiado */
-    min-width: 220px;
-  }
-  
-  .task-title {
-    font-weight: bold;
-    font-size: 1.1rem;
-  }
-  
-  .task-info {
-    animation: fadeIn 0.2s ease-in-out;
-    margin-top: 0.5rem;
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-5px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .task-name {
-    font-weight: 500;
-    margin-bottom: 0.3rem;
-  }
-  
-  .task-datetime {
-    font-size: 0.9rem;
-    color: #555;
-  }
-  
-  .task-status {
-    font-size: 0.85rem;
-    margin: 0.5rem 0;
-    font-weight: 500;
-  }
-  
-  .task-status.done {
-    color: #28a745;
-  }
-  
-  .task-status.pending {
-    color: #ff9800;
-  }
-  
-  .complete-btn {
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 0.4rem 0.6rem;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-top: 0.5rem;
-  }
-  
-  .complete-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.task-card {
+  background: #fefefe;
+  border-radius: 12px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 280px;
+  border: 2px solid transparent; /* para permitir borde dinámico */
+}
+
+.task-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+}
+
+.task-card.vencimiento-inminente {
+  border-color: #e53e3e;
+  background-color: #fff5f5;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f0f0f0;
+}
+
+.task-index {
+  font-weight: bold;
+}
+
+.badge.prioridad {
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  color: #fff;
+}
+.badge.prioridad.alto { background: #e53e3e; }
+.badge.prioridad.medio { background: #dd6b20; }
+.badge.prioridad.bajo { background: #38a169; }
+
+.task-info {
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.task-name {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.task-datetime {
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.tiempo-restante {
+  font-size: 0.85rem;
+  color: #2d3748;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.task-status {
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+.task-status.done { color: #38a169; }
+.task-status.pending { color: #dd6b20; }
+
+.complete-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.complete-form input[type='file'] {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.3rem;
+}
+.complete-form textarea {
+  resize: vertical;
+  min-height: 60px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.complete-btn {
+  background: #3182ce;
+  color: #fff;
+  border: none;
+  padding: 0.6rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.complete-btn:hover {
+  background: #2b6cb0;
+}
+
+.resultados-tarea {
+  margin-top: 1rem;
+  text-align: center;
+}
+.imagen-evidencia {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+.notas-tarea {
+  font-size: 0.9rem;
+  color: #333;
+}
