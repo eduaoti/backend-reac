@@ -3,7 +3,7 @@ name: CI/CD - Tests & Deploy
 on:
   push:
     branches:
-      - main         # o cambia a Pulls si quieres que dispare con esa rama
+      - main
   pull_request:
 
 jobs:
@@ -25,58 +25,53 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_NAME: ${{ secrets.ACR_NAME }}
       RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
       LOCATION: ${{ secrets.AZURE_LOCATION }}
       IMAGE_NAME: doitnow-frontend
-      IMAGE_TAG: ${{ github.sha }}   # tag inmutable por commit
+      IMAGE_TAG: ${{ github.sha }}
       CONTAINER_NAME: ${{ secrets.CONTAINER_NAME || 'doitnow-frontend' }}
       DNS_LABEL: ${{ secrets.DNS_LABEL || 'doitnow-front-eduaoti' }}
     steps:
       - uses: actions/checkout@v4
 
-      # Login a Azure con el secret AZURE_CREDENTIALS (JSON completo)
+      # Login a Azure
       - name: Azure CLI Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Login a ACR
-      - name: Docker login to ACR
-        run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login $ACR_LOGIN_SERVER -u "${{ secrets.ACR_USERNAME }}" --password-stdin
+      # Validar sesión
+      - name: Validar sesión
+        run: az account show
 
-      # Build & push imagen (linux/amd64 igual que hiciste local)
+      # Build & push imagen al ACR
       - name: Build & Push Frontend
         run: |
           docker build --platform linux/amd64 -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG .
           docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
 
-      # Crea o actualiza el contenedor en ACI
+      # Desplegar en Azure Container Instances
       - name: Deploy to Azure Container Instances
         run: |
-          # si ya existe, lo borro para recrearlo limpio (idempotente)
-          az container delete -g "$RG" -n "$CONTAINER_NAME" -y || true
+          CN="${CONTAINER_NAME:-doitnow-frontend}"
+          DL="${DNS_LABEL:-doitnow-front-eduaoti}"
+
+          az container delete -g "$RG" -n "$CN" -y || true
 
           az container create \
             --resource-group "$RG" \
-            --name "$CONTAINER_NAME" \
+            --name "$CN" \
             --image "$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG" \
-            --dns-name-label "$DNS_LABEL" \
+            --dns-name-label "$DL" \
             --location "$LOCATION" \
             --ports 80 \
             --os-type Linux \
             --cpu 1 \
             --memory 1.5 \
-            --registry-login-server "$ACR_LOGIN_SERVER" \
-            --registry-username "${{ secrets.ACR_USERNAME }}" \
-            --registry-password "${{ secrets.ACR_PASSWORD }}" \
             --restart-policy Always
 
       - name: Mostrar estado
         run: |
-          az container show -g "$RG" -n "$CONTAINER_NAME" \
+          CN="${CONTAINER_NAME:-doitnow-frontend}"
+          az container show -g "$RG" -n "$CN" \
             --query "{FQDN:ipAddress.fqdn,State:instanceView.state}" -o table
-
-      - name: Mostrar logs (opcional)
-        run: az container logs -g "$RG" -n "$CONTAINER_NAME" || true
