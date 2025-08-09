@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 
 import GalaxyBackground from './components/GalaxyBackground';
+import Inicio from './components/Inicio';
 import LoginForm from './components/LoginForm';
 import Registro from './components/Registro';
 import TaskForm from './components/TaskForm';
@@ -11,23 +12,21 @@ import Recompensas from './components/Recompensas';
 import {
   fetchTareas,
   addTarea,
-  completarTarea,
-  // obtenerPuntajeTotal  // ❌ ya no lo usaremos
+  completarTarea
 } from './services/tareaService';
 
 import {
   restarPuntos as restarPuntosAPI,
-  obtenerSaldo // ✅ nuevo
+  obtenerSaldo
 } from './services/usuarioService';
 
 import './App.css';
 
-axios.defaults.baseURL = 'https://localhost:3000';
 
 export default function App() {
   const [tareas, setTareas] = useState([]);
   const [usuario, setUsuario] = useState(null);
-  const [vista, setVista] = useState('login');
+  const [vista, setVista] = useState('inicio');
   const [puntos, setPuntos] = useState(0);
   const [mostrarModal, setMostrarModal] = useState(false);
 
@@ -51,7 +50,7 @@ export default function App() {
   useEffect(() => {
     if (usuario) {
       cargarTareas();
-      cargarSaldo(); // ✅ en lugar de cargarPuntaje()
+      cargarSaldo();
     }
   }, [usuario]);
 
@@ -62,6 +61,7 @@ export default function App() {
     setUsuario(null);
     setTareas([]);
     setPuntos(0);
+    setVista('inicio');
   }
 
   async function cargarTareas() {
@@ -70,22 +70,21 @@ export default function App() {
       setTareas(data);
     } catch (error) {
       console.error('Error al cargar tareas:', error);
-      if (error.message.includes('Token')) {
+      if (String(error?.message || '').includes('Token')) {
         alert("Tu sesión ha expirado. Por favor inicia sesión nuevamente.");
         logout();
       }
     }
   }
 
-  // ✅ NUEVO: cargar saldo real (total - gastados)
   async function cargarSaldo() {
     try {
       const token = localStorage.getItem('token');
-      const data = await obtenerSaldo(token); // { totalGanado, puntosGastados, disponibles }
+      const data = await obtenerSaldo(token);
       setPuntos(data.disponibles || 0);
     } catch (error) {
       console.error('Error al obtener saldo:', error);
-      if (error.message?.includes?.('Token')) {
+      if (String(error?.message || '').includes('Token')) {
         alert("Tu sesión ha expirado. Por favor inicia sesión nuevamente.");
         logout();
       }
@@ -95,13 +94,13 @@ export default function App() {
   async function handleAdd(tarea) {
     await addTarea(tarea);
     cargarTareas();
-    cargarSaldo(); // ✅ refresca saldo
+    cargarSaldo();
   }
 
   async function handleComplete(id, formData) {
     await completarTarea(id, formData);
     cargarTareas();
-    cargarSaldo(); // ✅ refresca saldo (sumó puntos por prioridad)
+    cargarSaldo();
   }
 
   async function restarPuntos(cantidad) {
@@ -114,10 +113,10 @@ export default function App() {
       }
 
       const { puntosDisponibles } = await restarPuntosAPI(puntosNumericos, token);
-      setPuntos(puntosDisponibles); // ✅ ya lo haces perfecto
+      setPuntos(puntosDisponibles);
     } catch (error) {
-      console.error("❌ Error al canjear recompensa:", error.response?.data || error.message);
-      alert(error.response?.data?.mensaje || "Ocurrió un error al canjear la recompensa");
+      console.error("❌ Error al canjear recompensa:", error?.response?.data || error.message);
+      alert(error?.response?.data?.mensaje || "Ocurrió un error al canjear la recompensa");
     }
   }
 
@@ -126,16 +125,19 @@ export default function App() {
       <GalaxyBackground />
       <div className="contenedor-app">
         {!usuario ? (
-          vista === 'login' ? (
+          vista === 'inicio' ? (
+            <Inicio
+              onLoginClick={() => setVista('login')}
+              onRegisterClick={() => setVista('registro')}
+            />
+          ) : vista === 'login' ? (
             <LoginForm
               onLogin={async ({ token, usuario }) => {
-                // 💡 IMPORTANTE: aquí refrescamos el saldo apenas loguea
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
                 localStorage.setItem('token', token);
                 localStorage.setItem('usuario', JSON.stringify(usuario));
                 setUsuario(usuario);
 
-                // ✅ Carga saldo al inicio
                 try {
                   const { disponibles } = await obtenerSaldo(token);
                   setPuntos(disponibles || 0);

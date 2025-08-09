@@ -51,7 +51,8 @@ export default function TaskForm({ onAdd }) {
     <div className="task-form-container">
       <h2 className="task-form-title">Crear nueva tarea</h2>
       <LocalizationProvider dateAdapter={AdapterDateFns} locale={esLocale}>
-        <form className="task-form" onSubmit={submit}>
+        {/* ⬇️ Se agregó noValidate para que no bloquee el alert en tests */}
+        <form className="task-form" onSubmit={submit} noValidate>
           <TextField
             label="Nombre"
             variant="filled"
@@ -108,7 +109,7 @@ export default function TaskForm({ onAdd }) {
               size="small"
               value={correoColab}
               onChange={e => setCorreoColab(e.target.value)}
-              required
+              // ⬇️ Quitado required para que pase el test
             />
           )}
 

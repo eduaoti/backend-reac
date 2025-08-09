@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API = 'https://localhost:3000/api/usuarios';
+// ❌ NO pongas dominio aquí
+const API = '/api/usuarios';
 
 export async function registrarUsuario(datos) {
   const { data } = await axios.post(`${API}/registrar`, datos, {
@@ -26,11 +27,11 @@ export async function login(correo, contraseña) {
   );
   return data;
 }
-// ✅ NUEVO: Restar puntos al usuario autenticado
+
 export async function restarPuntos(cantidad, token) {
   const { data } = await axios.post(
     `${API}/restar-puntos`,
-    { puntos: cantidad }, // 🔧 corregido aquí
+    { puntos: cantidad },
     {
       headers: {
         'Content-Type': 'application/json',
@@ -40,11 +41,10 @@ export async function restarPuntos(cantidad, token) {
   );
   return data;
 }
+
 export async function obtenerSaldo(token) {
   const { data } = await axios.get(`${API}/saldo`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+    headers: { Authorization: `Bearer ${token}` }
   });
-  return data; // { totalGanado, puntosGastados, disponibles }
+  return data;
 }

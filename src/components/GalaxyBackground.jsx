@@ -3,13 +3,18 @@ import React, { useEffect, useRef } from 'react';
 import './GalaxyBackground.css';
 
 export default function GalaxyBackground() {
-  const canvasRef = useRef();
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     let stars = [];
     const numStars = 150;
+    let rafId;
+    let alive = true;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -29,6 +34,7 @@ export default function GalaxyBackground() {
     }
 
     const animate = () => {
+      if (!alive) return; // <- corta el loop al desmontar
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = 'white';
       stars.forEach(star => {
@@ -38,12 +44,16 @@ export default function GalaxyBackground() {
         ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
         ctx.fill();
       });
-      requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(animate);
     };
 
     animate();
 
-    return () => window.removeEventListener('resize', resize);
+    return () => {
+      alive = false;
+      window.removeEventListener('resize', resize);
+      if (rafId) cancelAnimationFrame(rafId); // <- importante
+    };
   }, []);
 
   return <canvas ref={canvasRef} className="galaxy-canvas"></canvas>;
