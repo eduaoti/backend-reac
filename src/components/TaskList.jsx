@@ -65,14 +65,12 @@ export default function TaskList({ tasks, onComplete }) {
                 {new Date(t.fechaLimite).toLocaleString()}
               </p>
 
-              {/* Mostrar cronómetro si NO está completada */}
               {!t.cumplida && (
                 <p className="tiempo-restante">
                   ⏰ Tiempo restante: {calcularTiempoRestante(t)}
                 </p>
               )}
 
-              {/* Mostrar fecha de cumplimiento si está completada */}
               {t.cumplida && (
                 <p className="task-status done">
                   ✅ Completada el:{' '}
@@ -94,11 +92,12 @@ export default function TaskList({ tasks, onComplete }) {
               {t.cumplida && seleccionada && (
                 <div className="resultados-tarea">
                   {t.imagenCompletada && (
-                    <img
-                      src={`https://localhost:3000/uploads/${t.imagenCompletada}`}
-                      alt="Evidencia"
-                      className="imagen-evidencia"
-                    />
+                 <img
+                 src={`/uploads/${t.imagenCompletada}`}
+                 alt="Evidencia"
+                 className="imagen-evidencia"
+               />
+               
                   )}
                   {t.notas && (
                     <p className="notas-tarea">
