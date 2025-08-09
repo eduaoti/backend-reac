@@ -49,10 +49,23 @@ jobs:
         run: az acr login -n "$ACR_NAME"
 
       # Build & push imagen al ACR
-      - name: Build & Push Frontend
+      - name: Build & Push Frontend (ACR)
         run: |
           docker build --platform linux/amd64 -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG .
           docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
+
+      # ====== Publicar también en Docker Hub ======
+      - name: Docker Hub login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Push a Docker Hub
+        run: |
+          # tag con SHA y latest
+          docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:$IMAGE_TAG
+          docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:$IMAGE_TAG
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+      # ============================================
 
       # Desplegar en Azure Container Instances (ACI)
       # Para que ACI jale la imagen, usa admin user del ACR (por ahora)
