@@ -31,16 +31,17 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://doinow-backend-edu-7f3a.eastus.azurecontainer.io:3000',
+        target: 'https://doinow-back-16-1.azurewebsites.net',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
       '/uploads': {
-        target: 'http://doinow-backend-edu-7f3a.eastus.azurecontainer.io:3000',
+        target: 'https://doinow-back-16-1.azurewebsites.net',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       }
     }
+    
   },
   // Vitest
   test: {
