@@ -1,31 +1,41 @@
+name: CI/CD - Tests & Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    name: Ejecutar pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test
+
   deploy:
-    name: Desplegar backend en Azure
+    name: Despliegue en Azure
     needs: test
     runs-on: ubuntu-latest
-
     env:
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_NAME:         ${{ secrets.ACR_NAME }}
-      RG:               ${{ secrets.AZURE_RESOURCE_GROUP }}
-      LOCATION:         ${{ secrets.AZURE_LOCATION }}
-
-      IMAGE_NAME: doinow-backend
-      IMAGE_TAG:  ${{ github.sha }}
-
-      CONTAINER_NAME: doinow-backend
-
-      # App vars
-      MONGO_URI:  ${{ secrets.MONGO_URI }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      MAIL_USER:  ${{ secrets.MAIL_USER }}
-      MAIL_PASS:  ${{ secrets.MAIL_PASS }}
-      FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }} # opcional para CORS
-
-      DOCKERHUB_REPO: doinow-backend
-
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}   # ej: eduaotiacr.azurecr.io
+      ACR_NAME: ${{ secrets.ACR_NAME }}                   # ej: eduaotiacr
+      RG: ${{ secrets.AZURE_RESOURCE_GROUP }}             # doitnow-rg
+      LOCATION: ${{ secrets.AZURE_LOCATION }}             # eastus
+      IMAGE_NAME: doitnow-frontend
+      IMAGE_TAG: ${{ github.sha }}
+      CONTAINER_NAME: ${{ secrets.CONTAINER_NAME || 'doitnow-frontend' }}
+      DNS_LABEL: ${{ secrets.DNS_LABEL || 'doitnow-front-eduaoti' }}
     steps:
       - uses: actions/checkout@v4
 
+      # Login a Azure con Service Principal (AZURE_CREDENTIALS)
       - name: Azure CLI Login
         uses: azure/login@v2
         with:
@@ -34,61 +44,48 @@
       - name: Validar sesión
         run: az account show
 
-      - name: Login a ACR (RBAC)
+      # Login a ACR usando RBAC (sin user/pass); autentica el daemon de Docker
+      - name: ACR RBAC Login (docker)
         run: az acr login -n "$ACR_NAME"
 
-      - name: Build & Push Backend (ACR)
+      # Build & push imagen al ACR
+      - name: Build & Push Frontend (ACR)
         run: |
           docker build --platform linux/amd64 -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG .
           docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
 
-      - name: (Opcional) Login a Docker Hub y push
-        run: |
-          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-            DH_REPO="${{ secrets.DOCKERHUB_USERNAME }}/${DOCKERHUB_REPO}"
-            docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG $DH_REPO:${GITHUB_SHA::7}
-            docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG $DH_REPO:latest
-            docker push $DH_REPO:${GITHUB_SHA::7}
-            docker push $DH_REPO:latest
-          else
-            echo "No Docker Hub secrets; skipping push."
-          fi
+      # ====== Publicar también en Docker Hub ======
+      - name: Docker Hub login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-      # --- NUEVO: DNS label único ---
-      - name: Generar DNS label único
+      - name: Push a Docker Hub
         run: |
-          BASE="doinow-back"                         # tu prefijo
-          SUF="${GITHUB_SHA::6}-${GITHUB_RUN_NUMBER}"
-          # ACI exige <= 60 chars, solo minúsculas y números
-          DNS_LABEL="$(echo "${BASE}-${SUF}" | tr '[:upper:]' '[:lower:]' | cut -c1-60)"
-          echo "DNS_LABEL=${DNS_LABEL}" >> $GITHUB_ENV
-          echo "DNS_LABEL generado: ${DNS_LABEL}"
+          # tag con SHA y latest
+          docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:$IMAGE_TAG
+          docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:$IMAGE_TAG
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+      # ============================================
 
+      # Desplegar en Azure Container Instances (ACI)
+      # Para que ACI jale la imagen, usa admin user del ACR (por ahora)
       - name: Deploy to Azure Container Instances
         run: |
-          CN="${CONTAINER_NAME}"
+          CN="${CONTAINER_NAME:-doitnow-frontend}"
+          DL="${DNS_LABEL:-doitnow-front-eduaoti}"
 
-          # Borrar el anterior si existe (el DNS viejo puede quedar reservado unos minutos)
           az container delete -g "$RG" -n "$CN" -y || true
 
           az container create \
             --resource-group "$RG" \
             --name "$CN" \
             --image "$ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG" \
-            --dns-name-label "${DNS_LABEL}" \
+            --dns-name-label "$DL" \
             --location "$LOCATION" \
-            --ports 3000 \
+            --ports 80 \
             --os-type Linux \
             --cpu 1 \
-            --memory 2.0 \
-            --environment-variables \
-              MONGO_URI="$MONGO_URI" \
-              JWT_SECRET="$JWT_SECRET" \
-              MAIL_USER="$MAIL_USER" \
-              MAIL_PASS="$MAIL_PASS" \
-              NODE_ENV="production" \
-              FRONTEND_ORIGIN="${FRONTEND_ORIGIN:-*}" \
+            --memory 1.5 \
             --registry-login-server "$ACR_LOGIN_SERVER" \
             --registry-username "${{ secrets.ACR_USERNAME }}" \
             --registry-password "${{ secrets.ACR_PASSWORD }}" \
@@ -96,8 +93,11 @@
 
       - name: Mostrar estado
         run: |
-          az container show -g "$RG" -n "$CONTAINER_NAME" \
-            --query "{FQDN:ipAddress.fqdn,State:instanceView.state,Ports:ipAddress.ports}" -o table
+          CN="${CONTAINER_NAME:-doitnow-frontend}"
+          az container show -g "$RG" -n "$CN" \
+            --query "{FQDN:ipAddress.fqdn,State:instanceView.state}" -o table
 
       - name: Logs (opcional)
-        run: az container logs -g "$RG" -n "$CONTAINER_NAME" || true
+        run: |
+          CN="${CONTAINER_NAME:-doitnow-frontend}"
+          az container logs -g "$RG" -n "$CN" || true

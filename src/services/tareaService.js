@@ -1,4 +1,6 @@
-const API = '/api/tareas';
+import { API_BASE } from '../config';
+
+const API = `${API_BASE}/api/tareas`;
 
 function getTokenHeader() {
   const token = localStorage.getItem('token');
@@ -35,7 +37,7 @@ export async function addTarea(tarea) {
 export async function completarTarea(id, formData) {
   const res = await fetch(`${API}/${id}/cumplir`, {
     method: 'PUT',
-    headers: getTokenHeader(), // no setees Content-Type
+    headers: getTokenHeader(), // NO pongas Content-Type con FormData
     body: formData
   });
   return handleResponse(res);

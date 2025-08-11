@@ -1,4 +1,6 @@
+// src/components/TaskList.jsx
 import { useEffect, useState, useRef } from 'react';
+import { UPLOADS_BASE } from '../config';
 import './TaskList.css';
 
 export default function TaskList({ tasks, onComplete }) {
@@ -16,8 +18,8 @@ export default function TaskList({ tasks, onComplete }) {
   };
 
   const prioridadOrden = { alto: 1, medio: 2, bajo: 3 };
-  const tareasOrdenadas = [...tasks].sort(
-    (a, b) => prioridadOrden[a.prioridad] - prioridadOrden[b.prioridad]
+  const tareasOrdenadas = [...(tasks || [])].sort(
+    (a, b) => (prioridadOrden[a.prioridad] || 99) - (prioridadOrden[b.prioridad] || 99)
   );
 
   const calcularTiempoRestante = (t) => {
@@ -31,6 +33,7 @@ export default function TaskList({ tasks, onComplete }) {
     const horas = Math.floor(diffMs / (1000 * 60 * 60)) % 24;
     const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
+    // Alerta una sola vez cuando faltan <= 2 horas
     if (diffMs <= 1000 * 60 * 60 * 2 && !tareasAlertadas.current.has(t._id)) {
       alert(`🚨 La tarea '${t.nombre}' está por vencerse en menos de 2 horas.`);
       tareasAlertadas.current.add(t._id);
@@ -73,7 +76,7 @@ export default function TaskList({ tasks, onComplete }) {
 
               {t.cumplida && (
                 <p className="task-status done">
-                  ✅ Completada el:{' '}
+                  ✅ Completada el{' '}
                   {t.fechaCumplimiento
                     ? new Date(t.fechaCumplimiento).toLocaleString('es-MX', {
                         dateStyle: 'medium',
@@ -92,12 +95,11 @@ export default function TaskList({ tasks, onComplete }) {
               {t.cumplida && seleccionada && (
                 <div className="resultados-tarea">
                   {t.imagenCompletada && (
-                 <img
-                 src={`/uploads/${t.imagenCompletada}`}
-                 alt="Evidencia"
-                 className="imagen-evidencia"
-               />
-               
+                    <img
+                      src={`${UPLOADS_BASE}/${t.imagenCompletada}`}
+                      alt="Evidencia"
+                      className="imagen-evidencia"
+                    />
                   )}
                   {t.notas && (
                     <p className="notas-tarea">
