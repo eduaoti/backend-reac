@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { API_BASE } from '../config';
 
-// ❌ NO pongas dominio aquí
-const API = '/api/usuarios';
+const API = `${API_BASE}/api/usuarios`;
 
 export async function registrarUsuario(datos) {
   const { data } = await axios.post(`${API}/registrar`, datos, {
