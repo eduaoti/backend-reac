@@ -24,21 +24,21 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Azure / ACR
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
-      ACR_NAME:         ${{ secrets.ACR_NAME }}
-      RG:               ${{ secrets.AZURE_RESOURCE_GROUP }}
-      LOCATION:         ${{ secrets.AZURE_LOCATION }}
+      # ===== Azure / ACR =====
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}   # p.ej. eduaotiacr.azurecr.io
+      ACR_NAME:         ${{ secrets.ACR_NAME }}           # p.ej. eduaotiacr
+      RG:               ${{ secrets.AZURE_RESOURCE_GROUP }}   # p.ej. doitnow-rg
+      LOCATION:         ${{ secrets.AZURE_LOCATION }}         # p.ej. eastus
 
-      # Imagen
+      # ===== Imagen =====
       IMAGE_NAME: doitnow-frontend
       IMAGE_TAG:  ${{ github.sha }}
 
-      # ACI (NO usar || aquí; hacemos fallback en bash)
+      # ===== ACI ===== (fallback se hace en bash)
       CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
       DNS_LABEL:      ${{ secrets.DNS_LABEL }}
 
-      # Front Door (HTTPS)
+      # ===== Front Door (HTTPS) =====
       AFD_PROFILE:      fd-doitnow
       AFD_ENDPOINT:     ep-doitnow
       AFD_ORIGIN_GROUP: og-frontend
@@ -86,10 +86,16 @@ jobs:
             --restart-policy Always
 
       # ===== HTTPS con Azure Front Door =====
-      - name: Registrar provider Microsoft.Cdn (si aplica)
-        run: az provider register --namespace Microsoft.Cdn --wait
+      - name: Verificar provider Microsoft.Cdn (debe estar Registered)
+        run: |
+          state=$(az provider show -n Microsoft.Cdn --query registrationState -o tsv || echo "Unknown")
+          echo "Microsoft.Cdn registrationState=$state"
+          if [ "$state" != "Registered" ]; then
+            echo "El provider Microsoft.Cdn no está Registered. Regístralo una vez con una cuenta Owner/Contributor de suscripción."
+            exit 1
+          fi
 
-      - name: Obtener FQDN de ACI (frontend)
+      - name: Obtener FQDN/IP de ACI (frontend)
         id: aci
         run: |
           CN="${CONTAINER_NAME:-doitnow-frontend}"
@@ -98,7 +104,7 @@ jobs:
             FQDN=$(az container show -g "$RG" -n "$CN" --query "ipAddress.ip" -o tsv)
           fi
           echo "fqdn=$FQDN" >> $GITHUB_OUTPUT
-          echo "ACI_FQDN: $FQDN"
+          echo "ACI Host: $FQDN"
 
       - name: Crear/usar Front Door Profile
         run: |
