@@ -1,41 +1,26 @@
-name: CI/CD - Tests & Deploy
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-
-jobs:
-  test:
-    name: Ejecutar pruebas
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run test
-
   deploy:
     name: Despliegue en Azure
     needs: test
     runs-on: ubuntu-latest
     env:
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}   # ej: eduaotiacr.azurecr.io
-      ACR_NAME: ${{ secrets.ACR_NAME }}                   # ej: eduaotiacr
-      RG: ${{ secrets.AZURE_RESOURCE_GROUP }}             # doitnow-rg
-      LOCATION: ${{ secrets.AZURE_LOCATION }}             # eastus
+      ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_NAME: ${{ secrets.ACR_NAME }}
+      RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      LOCATION: ${{ secrets.AZURE_LOCATION }}
       IMAGE_NAME: doitnow-frontend
       IMAGE_TAG: ${{ github.sha }}
       CONTAINER_NAME: ${{ secrets.CONTAINER_NAME || 'doitnow-frontend' }}
       DNS_LABEL: ${{ secrets.DNS_LABEL || 'doitnow-front-eduaoti' }}
+
+      # ===== Front Door (HTTPS) =====
+      AFD_PROFILE: fd-doitnow
+      AFD_ENDPOINT: ep-doitnow
+      AFD_ORIGIN_GROUP: og-frontend
+      AFD_ORIGIN_NAME: origin-frontend
+
     steps:
       - uses: actions/checkout@v4
 
-      # Login a Azure con Service Principal (AZURE_CREDENTIALS)
       - name: Azure CLI Login
         uses: azure/login@v2
         with:
@@ -44,31 +29,14 @@ jobs:
       - name: Validar sesión
         run: az account show
 
-      # Login a ACR usando RBAC (sin user/pass); autentica el daemon de Docker
       - name: ACR RBAC Login (docker)
         run: az acr login -n "$ACR_NAME"
 
-      # Build & push imagen al ACR
       - name: Build & Push Frontend (ACR)
         run: |
           docker build --platform linux/amd64 -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG .
           docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
 
-      # ====== Publicar también en Docker Hub ======
-      - name: Docker Hub login
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-
-      - name: Push a Docker Hub
-        run: |
-          # tag con SHA y latest
-          docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:$IMAGE_TAG
-          docker tag $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:$IMAGE_TAG
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
-      # ============================================
-
-      # Desplegar en Azure Container Instances (ACI)
-      # Para que ACI jale la imagen, usa admin user del ACR (por ahora)
       - name: Deploy to Azure Container Instances
         run: |
           CN="${CONTAINER_NAME:-doitnow-frontend}"
@@ -91,13 +59,69 @@ jobs:
             --registry-password "${{ secrets.ACR_PASSWORD }}" \
             --restart-policy Always
 
-      - name: Mostrar estado
-        run: |
-          CN="${CONTAINER_NAME:-doitnow-frontend}"
-          az container show -g "$RG" -n "$CN" \
-            --query "{FQDN:ipAddress.fqdn,State:instanceView.state}" -o table
+      # ================== HTTPS con Front Door ==================
+      - name: Registrar provider Microsoft.Cdn (si aplica)
+        run: az provider register --namespace Microsoft.Cdn --wait
 
-      - name: Logs (opcional)
+      - name: Obtener FQDN de ACI (frontend)
+        id: aci
         run: |
-          CN="${CONTAINER_NAME:-doitnow-frontend}"
-          az container logs -g "$RG" -n "$CN" || true
+          FQDN=$(az container show -g "$RG" -n "${CONTAINER_NAME:-doitnow-frontend}" --query "ipAddress.fqdn" -o tsv)
+          echo "fqdn=${FQDN}" >> $GITHUB_OUTPUT
+          echo "ACI_FQDN: $FQDN"
+
+      - name: Crear/usar Front Door Profile
+        run: |
+          az afd profile show -g "$RG" -n "$AFD_PROFILE" \
+            || az afd profile create -g "$RG" -n "$AFD_PROFILE" --sku Standard_AzureFrontDoor
+
+      - name: Crear/usar Endpoint HTTPS público
+        run: |
+          az afd endpoint show -g "$RG" --profile-name "$AFD_PROFILE" -n "$AFD_ENDPOINT" \
+            || az afd endpoint create -g "$RG" --profile-name "$AFD_PROFILE" -n "$AFD_ENDPOINT" --enabled-state Enabled
+
+      - name: Crear/usar Origin Group
+        run: |
+          az afd origin-group show -g "$RG" --profile-name "$AFD_PROFILE" -n "$AFD_ORIGIN_GROUP" \
+            || az afd origin-group create -g "$RG" --profile-name "$AFD_PROFILE" -n "$AFD_ORIGIN_GROUP"
+
+      - name: Crear/actualizar Origin (ACI FQDN)
+        run: |
+          ACI_FQDN="${{ steps.aci.outputs.fqdn }}"
+          # si no hay FQDN todavía, usa la IP como host-name
+          if [ -z "$ACI_FQDN" ]; then
+            ACI_FQDN=$(az container show -g "$RG" -n "${CONTAINER_NAME:-doitnow-frontend}" --query "ipAddress.ip" -o tsv)
+          fi
+          # create or update
+          az afd origin show -g "$RG" --profile-name "$AFD_PROFILE" \
+            --origin-group-name "$AFD_ORIGIN_GROUP" -n "$AFD_ORIGIN_NAME" \
+            && az afd origin update -g "$RG" --profile-name "$AFD_PROFILE" \
+                 --origin-group-name "$AFD_ORIGIN_GROUP" -n "$AFD_ORIGIN_NAME" \
+                 --host-name "$ACI_FQDN" --http-port 80 --https-port 443 --enabled-state Enabled \
+            || az afd origin create -g "$RG" --profile-name "$AFD_PROFILE" \
+                 --origin-group-name "$AFD_ORIGIN_GROUP" -n "$AFD_ORIGIN_NAME" \
+                 --host-name "$ACI_FQDN" --http-port 80 --https-port 443 --enabled-state Enabled
+
+      - name: Crear/usar Route (forzar HTTPS y forward HTTP)
+        run: |
+          az afd route show -g "$RG" --profile-name "$AFD_PROFILE" \
+            --endpoint-name "$AFD_ENDPOINT" -n route-frontend \
+          || az afd route create -g "$RG" --profile-name "$AFD_PROFILE" \
+               --endpoint-name "$AFD_ENDPOINT" -n route-frontend \
+               --origin-group "$AFD_ORIGIN_GROUP" \
+               --supported-protocols Http Https \
+               --https-redirect Enabled \
+               --forwarding-protocol HttpOnly \
+               --link-to-default-domain Enabled \
+               --patterns "/*"
+
+      - name: Mostrar URL HTTPS del Frontend
+        run: |
+          FD_HOST=$(az afd endpoint show -g "$RG" --profile-name "$AFD_PROFILE" -n "$AFD_ENDPOINT" --query "hostName" -o tsv)
+          echo "Frontend HTTPS: https://${FD_HOST}"
+      # =========================================================
+
+      - name: Mostrar estado ACI
+        run: |
+          az container show -g "$RG" -n "${CONTAINER_NAME:-doitnow-frontend}" \
+            --query "{FQDN:ipAddress.fqdn,State:instanceView.state}" -o table
