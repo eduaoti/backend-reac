@@ -1,33 +1,35 @@
 # ---- Etapa 1: Build ----
-    FROM node:18-alpine AS build
+    FROM node:20-alpine AS build
     WORKDIR /app
     
-    # Copiamos solo package.json primero para aprovechar la cache
     COPY package*.json ./
-    
-    # Instalamos dependencias
     RUN npm ci
     
-    # Copiamos el resto del código
     COPY . .
-    
-    # Construimos la app de producción
     RUN npm run build
     
-    # ---- Etapa 2: Nginx ----
+    # ---- Etapa 2: Nginx (runtime) ----
     FROM nginx:alpine
-    # Eliminamos html por defecto
+    
+    # Limpia html por defecto
     RUN rm -rf /usr/share/nginx/html/*
     
-    # Copiamos la build generada al directorio de Nginx
+    # ✅ gzip en el contexto correcto (http) vía conf.d
+    RUN printf "gzip on;\n\
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;\n" \
+      > /etc/nginx/conf.d/gzip.conf
+    
+    # Estáticos de la app
     COPY --from=build /app/dist /usr/share/nginx/html
     
-    # Copiamos configuración personalizada de Nginx
-    COPY nginx.conf /etc/nginx/conf.d/default.conf
+    # 🔁 Plantilla para envsubst en runtime (mecanismo nativo del entrypoint)
+    # El entrypoint de nginx generará /etc/nginx/conf.d/default.conf desde esta plantilla
+    COPY nginx.conf /etc/nginx/templates/default.conf.template
     
-    # Exponemos el puerto
+    # Valor por defecto; puedes override en `docker run -e BACKEND_HOST=...`
+    ENV BACKEND_HOST=doinow-back-16-1.azurewebsites.net
+    
     EXPOSE 80
-    
-    # Healthcheck para comprobar disponibilidad
-    HEALTHCHECK CMD wget -qO- http://localhost/ || exit 1
+    HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD wget -qO- http://localhost/ || exit 1
+    CMD ["nginx","-g","daemon off;"]
     
